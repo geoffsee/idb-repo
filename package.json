@@ -1,0 +1,49 @@
+{
+  "name": "idb-repo",
+  "version": "1.0.3",
+  "description": "A high-performance IndexedDB-based key-value storage implementation with caching, TTL support, and full TypeScript support",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist/ && bun build ./index.ts --target browser --outdir ./dist --minify && tsc --emitDeclarationOnly -p tsconfig.build.json && rm -rf dist/src"
+  },
+  "keywords": [
+    "indexeddb",
+    "kv-storage",
+    "storage",
+    "cache",
+    "typescript",
+    "browser",
+    "performance"
+  ],
+  "author": "github.com/geoffsee",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/geoffsee/idb-repo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/geoffsee/idb-repo/issues"
+  },
+  "homepage": "https://github.com/geoffsee/idb-repo#readme",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "idb-keyval": "^6.2.2",
+    "playwright": "^1.58.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
