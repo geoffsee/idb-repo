@@ -20,6 +20,8 @@ export {
   PassphraseEncryptionProvider,
 } from "./src/encryption/encryption-provider";
 
+export { WasmMlKemProvider } from "./src/encryption/wasm/wasm-provider";
+
 // Re-export types for convenience
 export type {
   KVGetOptions,

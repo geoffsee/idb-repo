@@ -4,6 +4,7 @@ import { NodeFileSystemStorageBackend } from "./src/storage-backend-node";
 
 export * from "./index";
 export { NodeFileSystemStorageBackend };
+export { NodeProvider } from "./src/encryption/node/node-provider";
 
 /**
  * Universal KV for Node.js - defaults to FileSystem
