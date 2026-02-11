@@ -13,7 +13,7 @@ function createMockKV(overrides?: Partial<KVNamespace>): KVNamespace {
       async (): Promise<KVListResult> => ({
         keys: [],
         list_complete: true,
-      })
+      }),
     ),
     ...overrides,
   };
@@ -148,7 +148,9 @@ describe("withKVFeatures", () => {
       const kv = withKVFeatures(base, { log: logFn });
       await kv.get("k");
       expect(logFn).toHaveBeenCalledTimes(1);
-      expect((logFn.mock.calls[0] as unknown as [string, ...unknown[]])[0]).toBe("get");
+      expect(
+        (logFn.mock.calls[0] as unknown as [string, ...unknown[]])[0],
+      ).toBe("get");
     });
 
     it("uses console.debug when log is true", async () => {
@@ -181,7 +183,8 @@ describe("withKVFeatures", () => {
       const kv = withKVFeatures(base, { time: true, metrics: metricsFn });
       await kv.get("k");
       expect(metricsFn).toHaveBeenCalledTimes(1);
-      const [method, duration, success] = metricsFn.mock.calls[0] as unknown as [string, number, boolean];
+      const [method, duration, success] = metricsFn.mock
+        .calls[0] as unknown as [string, number, boolean];
       expect(method).toBe("get");
       expect(typeof duration).toBe("number");
       expect(duration).toBeGreaterThanOrEqual(0);
@@ -202,7 +205,11 @@ describe("withKVFeatures", () => {
       });
       await expect(kv.get("k")).rejects.toThrow("boom");
       expect(metricsFn).toHaveBeenCalledTimes(1);
-      const [method, , success] = metricsFn.mock.calls[0] as unknown as [string, number, boolean];
+      const [method, , success] = metricsFn.mock.calls[0] as unknown as [
+        string,
+        number,
+        boolean,
+      ];
       expect(method).toBe("get");
       expect(success).toBe(false);
     });

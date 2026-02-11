@@ -9,13 +9,14 @@ This SDK provides a small, dependency-free abstraction for building fast, reliab
 The goal is to provide a consistent, predictable KV interface across all platforms, focusing on performance characteristics suitable for both client-side persistence and server-side edge runtimes.
 
 ## Design Principles
+
 - **Universal** — Same API for Browser, Node.js, and Bun
 - **Persistent** — Durable storage by default on all platforms
 - **Zero dependencies** — No runtime bloat, no transitive risk
 - **Performance-first** — In-memory LRU caching and optimized storage backends
 
-
 ## What This Is
+
 - A unified repository abstraction over platform-specific storage
 - A predictable KV interface with typed boundaries
 - A foundation for local-first and cross-platform applications
@@ -35,20 +36,21 @@ import { createKV } from "idb-repo";
 
 // Create a KV store instance - automatically picks best storage
 const kv = createKV({
-  dbName: "my-app",      // IndexedDB name or Node directory (default: "kv")
-  cacheEntries: 2048     // In-memory LRU cache size (default: 2048)
+  dbName: "my-app", // IndexedDB name or Node directory (default: "kv")
+  cacheEntries: 2048, // In-memory LRU cache size (default: 2048)
 });
 ```
 
 ### Environment Support
 
-| Runtime | Storage Engine | Persistence |
-| --- | --- | --- |
-| **Browser** | IndexedDB | Yes |
-| **Node.js / Bun** | LSM File System | Yes |
-| **Testing / Fallback** | In-Memory | No (volatile) |
+| Runtime                | Storage Engine  | Persistence   |
+| ---------------------- | --------------- | ------------- |
+| **Browser**            | IndexedDB       | Yes           |
+| **Node.js / Bun**      | LSM File System | Yes           |
+| **Testing / Fallback** | In-Memory       | No (volatile) |
 
 #### Forcing In-Memory (for tests)
+
 ```typescript
 const kv = createKV({ forceMemory: true });
 ```
@@ -65,10 +67,14 @@ await kv.put("key1", "value");
 await kv.put("user:123", { id: 123, name: "Alice" });
 
 // Store with metadata and expiration
-await kv.put("session:abc", { token: "xyz" }, {
-  metadata: { userId: "123" },
-  expirationTtl: 3600  // expires in 1 hour
-});
+await kv.put(
+  "session:abc",
+  { token: "xyz" },
+  {
+    metadata: { userId: "123" },
+    expirationTtl: 3600, // expires in 1 hour
+  },
+);
 
 // Store ArrayBuffer/binary data
 const buffer = new TextEncoder().encode("binary data");
@@ -110,13 +116,13 @@ const result = await kv.list();
 // List with pagination
 const page = await kv.list({
   limit: 10,
-  cursor: "previous-cursor"
+  cursor: "previous-cursor",
 });
 
 // List with key prefix filter
 const userKeys = await kv.list({
   prefix: "user:",
-  limit: 50
+  limit: 50,
 });
 ```
 
@@ -136,9 +142,9 @@ await kv.close();
 await kv.put("document:42", documentData, {
   metadata: {
     userId: "user:123",
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   },
-  expirationTtl: 86400 // 24 hours
+  expirationTtl: 86400, // 24 hours
 });
 
 // Retrieve and use metadata
@@ -154,12 +160,15 @@ const { value, metadata } = await kv.getWithMetadata("document:42");
 ### API Reference
 
 #### `createKV(opts?)`
+
 The primary entry point for creating a storage instance.
+
 - `dbName` (string): Storage identifier (IndexedDB name or Node directory).
 - `cacheEntries` (number): LRU cache size (default: 2048).
 - `forceMemory` (boolean): Force usage of volatile in-memory storage.
 
 #### `KVNamespace` Interface
+
 - `get(key, options?)` → Promise
 - `getWithMetadata(key, options?)` → Promise
 - `put(key, value, options?)` → Promise
