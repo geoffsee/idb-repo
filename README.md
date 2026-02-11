@@ -135,6 +135,32 @@ await kv.close();
 
 ### Advanced Usage
 
+#### Pluggable Encryption
+
+```typescript
+import { createKV, BaseEncryptionProvider } from "idb-repo";
+
+class MyEncryptionProvider extends BaseEncryptionProvider {
+  readonly providerId = "my-provider-v1";
+
+  async encrypt(plaintext: Uint8Array): Promise<Uint8Array> {
+    // your implementation
+    return plaintext;
+  }
+
+  async decrypt(ciphertext: Uint8Array): Promise<Uint8Array> {
+    // your implementation
+    return ciphertext;
+  }
+}
+
+const kv = createKV({
+  encryptionProvider: new MyEncryptionProvider(),
+  // optional key selector passed to encrypt/decrypt:
+  encryptionKeyId: "tenant-a",
+});
+```
+
 #### Metadata and Type Hints
 
 ```typescript
@@ -166,6 +192,8 @@ The primary entry point for creating a storage instance.
 - `dbName` (string): Storage identifier (IndexedDB name or Node directory).
 - `cacheEntries` (number): LRU cache size (default: 2048).
 - `forceMemory` (boolean): Force usage of volatile in-memory storage.
+- `encryptionProvider` (`BaseEncryptionProvider`): Optional provider used to encrypt/decrypt values at rest.
+- `encryptionKeyId` (string): Optional key identifier passed to provider `encrypt`/`decrypt`.
 
 #### `KVNamespace` Interface
 

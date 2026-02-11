@@ -2,6 +2,23 @@ import { describe, it, expect } from "bun:test";
 import { KVStorageAdapter } from "./storage-adapter";
 import { MemoryStorageBackend } from "./storage-backend";
 import { kvGetText, kvGetJson } from "./kv";
+import { BaseEncryptionProvider } from "./encryption/encryption-provider";
+
+class TestEncryptionProvider extends BaseEncryptionProvider {
+  readonly providerId = "test-provider";
+
+  async encrypt(plaintext: Uint8Array): Promise<Uint8Array> {
+    const out = new Uint8Array(plaintext.length);
+    for (let i = 0; i < plaintext.length; i++) {
+      out[i] = (plaintext[i] ?? 0) ^ 0xaa;
+    }
+    return out;
+  }
+
+  async decrypt(ciphertext: Uint8Array): Promise<Uint8Array> {
+    return this.encrypt(ciphertext);
+  }
+}
 
 describe("KVStorageAdapter with MemoryStorageBackend", () => {
   it("can put and get text", async () => {
@@ -86,5 +103,34 @@ describe("KVStorageAdapter with MemoryStorageBackend", () => {
     await kv.put("json", { a: 1 });
     const jsonValue = await kvGetJson<{ a: number }>(kv, "json");
     expect(jsonValue).toEqual({ a: 1 });
+  });
+
+  it("supports pluggable encryption providers via BaseEncryptionProvider", async () => {
+    const backend = new MemoryStorageBackend();
+    const kv = new KVStorageAdapter(backend, {
+      encryptionProvider: new TestEncryptionProvider(),
+    });
+
+    await kv.put("secret", "top-secret-value");
+
+    const raw = await backend.get("secret");
+    expect(raw?.encoding).toBe("binary");
+    const rawText = await (raw?.value as Blob).text();
+    expect(rawText).not.toContain("top-secret-value");
+
+    const decrypted = await kv.get("secret", { type: "text" });
+    expect(decrypted).toBe("top-secret-value");
+  });
+
+  it("round-trips JSON values with encryption enabled", async () => {
+    const backend = new MemoryStorageBackend();
+    const kv = new KVStorageAdapter(backend, {
+      encryptionProvider: new TestEncryptionProvider(),
+    });
+
+    const input = { team: "idb-repo", year: 2026 };
+    await kv.put("json-secret", input);
+    const output = await kv.get("json-secret", { type: "json" });
+    expect(output).toEqual(input);
   });
 });

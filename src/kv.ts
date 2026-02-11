@@ -3,6 +3,7 @@
  */
 
 import type {
+  KVAdapterOptions,
   KVGetOptions,
   KVListOptions,
   KVListResult,
@@ -20,23 +21,25 @@ import {
  * High-performance KV implementation over IndexedDB
  */
 export class IndexedDbKV extends KVStorageAdapter {
-  constructor(opts?: {
-    dbName?: string;
-    storeName?: string;
-    version?: number;
-    cacheEntries?: number;
-  }) {
+  constructor(
+    opts?: KVAdapterOptions & {
+      dbName?: string;
+      storeName?: string;
+      version?: number;
+    },
+  ) {
     const backend = new IndexedDbStorageBackend(opts);
     super(backend, opts);
   }
 }
 
-export function createIndexedDbKV(opts?: {
-  dbName?: string;
-  storeName?: string;
-  version?: number;
-  cacheEntries?: number;
-}): KVNamespace {
+export function createIndexedDbKV(
+  opts?: KVAdapterOptions & {
+    dbName?: string;
+    storeName?: string;
+    version?: number;
+  },
+): KVNamespace {
   return new IndexedDbKV(opts);
 }
 
@@ -83,7 +86,11 @@ type CreateKVOptions = ConstructorParameters<typeof IndexedDbKV>[0] & {
 };
 
 function adapterOptions(opts?: CreateKVOptions) {
-  return { cacheEntries: opts?.cacheEntries };
+  return {
+    cacheEntries: opts?.cacheEntries,
+    encryptionProvider: opts?.encryptionProvider,
+    encryptionKeyId: opts?.encryptionKeyId,
+  };
 }
 
 export function createKV(opts?: CreateKVOptions): KVNamespace {

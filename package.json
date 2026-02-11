@@ -23,7 +23,7 @@
     "build:node": "bun build ./index-node.ts --target node --outdir ./dist --minify --outfile index.js",
     "build:browser": "bun build ./index-browser.ts --target browser --outdir ./dist --minify --outfile browser.js",
     "build": "rm -rf dist/ && npm run build:node && npm run build:browser && tsc --emitDeclarationOnly -p tsconfig.build.json && rm -rf dist/src",
-    "test:encryption-provider:node": "cd src/encryption/node && node --import=tsx --test node-provider.test.ts"
+    "test:encryption-provider:node": "cd src/encryption/node && node --import=tsx --test node-provider-integration.test.node.ts"
   },
   "keywords": [
     "indexeddb",
