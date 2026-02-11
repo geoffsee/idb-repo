@@ -24,6 +24,20 @@ export {
 
 export { WasmMlKemProvider } from "./src/encryption/wasm/wasm-provider";
 
+// Key management utilities
+export {
+  LocalStorageKeyManager,
+  KeySerializer,
+  BackendKeyManager,
+} from "./src/encryption/key-management";
+
+export type {
+  StoredAESKey,
+  StoredPBKDF2Salt,
+  StoredMLKEMKeys,
+  StoredKey,
+} from "./src/encryption/key-management";
+
 // Re-export types for convenience
 export type {
   KVGetOptions,
