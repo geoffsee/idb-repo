@@ -4,6 +4,7 @@
  */
 
 export {
+    createKV,
     IndexedDbKV,
     createIndexedDbKV,
     kvGetText,

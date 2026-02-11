@@ -23,7 +23,10 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false,
-    "types": ["./types.ts"]
-  }
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
 }
