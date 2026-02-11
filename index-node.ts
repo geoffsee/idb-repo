@@ -1,8 +1,4 @@
-import { 
-    IndexedDbKV,
-    KVStorageAdapter,
-    MemoryStorageBackend
-} from "./index";
+import { IndexedDbKV, KVStorageAdapter, MemoryStorageBackend } from "./index";
 import type { KVNamespace } from "./index";
 import { NodeFileSystemStorageBackend } from "./src/storage-backend-node";
 
@@ -12,9 +8,13 @@ export { NodeFileSystemStorageBackend };
 /**
  * Universal KV for Node.js - defaults to FileSystem
  */
-export function createKV(opts?: ConstructorParameters<typeof IndexedDbKV>[0] & { forceMemory?: boolean }): KVNamespace {
-    if (opts?.forceMemory) {
-        return new KVStorageAdapter(new MemoryStorageBackend(), opts);
-    }
-    return new KVStorageAdapter(new NodeFileSystemStorageBackend(opts), opts);
+export function createKV(
+  opts?: ConstructorParameters<typeof IndexedDbKV>[0] & {
+    forceMemory?: boolean;
+  },
+): KVNamespace {
+  if (opts?.forceMemory) {
+    return new KVStorageAdapter(new MemoryStorageBackend(), opts);
+  }
+  return new KVStorageAdapter(new NodeFileSystemStorageBackend(opts), opts);
 }

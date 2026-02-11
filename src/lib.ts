@@ -4,11 +4,11 @@
  */
 
 export {
-    createKV,
-    IndexedDbKV,
-    createIndexedDbKV,
-    kvGetText,
-    kvGetJson,
-    kvGetArrayBuffer,
-    kvGetStream,
+  createKV,
+  IndexedDbKV,
+  createIndexedDbKV,
+  kvGetText,
+  kvGetJson,
+  kvGetArrayBuffer,
+  kvGetStream,
 } from "./kv";

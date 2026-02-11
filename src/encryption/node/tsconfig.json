@@ -11,7 +11,8 @@
     "target": "esnext",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "moduleResolution": "bundler",
-    "types": [],
+    "types": ["node"],
+    "erasableSyntaxOnly": true,
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
@@ -34,7 +35,6 @@
     // "noUnusedParameters": true,
     // "noFallthroughCasesInSwitch": true,
     // "noPropertyAccessFromIndexSignature": true,
-
     // Recommended Options
     "strict": true,
     "jsx": "react-jsx",

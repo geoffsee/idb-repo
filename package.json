@@ -22,7 +22,8 @@
   "scripts": {
     "build:node": "bun build ./index-node.ts --target node --outdir ./dist --minify --outfile index.js",
     "build:browser": "bun build ./index-browser.ts --target browser --outdir ./dist --minify --outfile browser.js",
-    "build": "rm -rf dist/ && npm run build:node && npm run build:browser && tsc --emitDeclarationOnly -p tsconfig.build.json && rm -rf dist/src"
+    "build": "rm -rf dist/ && npm run build:node && npm run build:browser && tsc --emitDeclarationOnly -p tsconfig.build.json && rm -rf dist/src",
+    "test:encryption-provider:node": "cd src/encryption/node && node --import=tsx --test node-provider.test.ts"
   },
   "keywords": [
     "indexeddb",
@@ -45,10 +46,13 @@
   "homepage": "https://github.com/geoffsee/idb-repo#readme",
   "devDependencies": {
     "@types/bun": "1.3.9",
+    "@types/node": "latest",
     "idb-keyval": "^6.2.2",
-    "playwright": "^1.58.2"
+    "playwright": "^1.58.2",
+    "vitest": "^4.0.18",
+    "tsx": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }

@@ -120,13 +120,13 @@ The fix uses Playwright's **route interception** to fulfill requests to `https:/
 
 ### Why not other approaches?
 
-| Approach | Problem |
-|---|---|
-| `page.setContent()` | Stays at `about:blank` — opaque origin |
-| `data:text/html,...` | Data URLs also have opaque origins |
-| `file:///...` | `file://` origins are opaque in WebKit |
-| Spin up an HTTP server | Unnecessary complexity; port management, startup latency |
-| **`context.route()` + `goto()`** | Clean, no real network, proper HTTPS origin |
+| Approach                         | Problem                                                  |
+| -------------------------------- | -------------------------------------------------------- |
+| `page.setContent()`              | Stays at `about:blank` — opaque origin                   |
+| `data:text/html,...`             | Data URLs also have opaque origins                       |
+| `file:///...`                    | `file://` origins are opaque in WebKit                   |
+| Spin up an HTTP server           | Unnecessary complexity; port management, startup latency |
+| **`context.route()` + `goto()`** | Clean, no real network, proper HTTPS origin              |
 
 ---
 
@@ -155,7 +155,7 @@ stateDiagram-v2
     Ready --> [*]
 ```
 
-Key ordering constraint: `addInitScript` must be called **before** `page.goto()`. The script fires during navigation, making helpers available for all subsequent `page.evaluate()` calls. The previous code called `addInitScript` *after* `setContent`, so it only applied to future navigations that never happened — requiring a fragile fallback `evaluate()` block.
+Key ordering constraint: `addInitScript` must be called **before** `page.goto()`. The script fires during navigation, making helpers available for all subsequent `page.evaluate()` calls. The previous code called `addInitScript` _after_ `setContent`, so it only applied to future navigations that never happened — requiring a fragile fallback `evaluate()` block.
 
 ---
 

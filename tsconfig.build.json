@@ -14,13 +14,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true
   },
-  "include": [
-    "index.ts"
-  ],
-  "exclude": [
-    "src/**/*.test.ts",
-    "bench",
-    "node_modules",
-    "test-utils"
-  ]
+  "include": ["index.ts"],
+  "exclude": ["src/**/*.test.ts", "bench", "node_modules", "test-utils"]
 }
