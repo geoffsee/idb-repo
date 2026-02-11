@@ -115,7 +115,7 @@ export class WasmMlKemProvider extends BaseEncryptionProvider {
     // 2. Import shared secret as AES-256-GCM key
     const aesKey = await this.crypto.subtle.importKey(
       "raw",
-      sharedSecret,
+      new Uint8Array(sharedSecret),
       { name: "AES-GCM", length: 256 },
       false,
       ["encrypt"],
@@ -128,9 +128,9 @@ export class WasmMlKemProvider extends BaseEncryptionProvider {
 
     // 4. Encrypt plaintext with AES-GCM
     const aesCt = await this.crypto.subtle.encrypt(
-      { name: "AES-GCM", iv },
+      { name: "AES-GCM", iv: new Uint8Array(iv) },
       aesKey,
-      plaintext,
+      new Uint8Array(plaintext),
     );
 
     const aesBytes = new Uint8Array(aesCt);
@@ -187,7 +187,7 @@ export class WasmMlKemProvider extends BaseEncryptionProvider {
     // 3. Import shared secret as AES-256-GCM key
     const aesKey = await this.crypto.subtle.importKey(
       "raw",
-      sharedSecret,
+      new Uint8Array(sharedSecret),
       { name: "AES-GCM", length: 256 },
       false,
       ["decrypt"],
@@ -196,9 +196,9 @@ export class WasmMlKemProvider extends BaseEncryptionProvider {
     // 4. Decrypt AES-GCM ciphertext
     try {
       const plaintext = await this.crypto.subtle.decrypt(
-        { name: "AES-GCM", iv },
+        { name: "AES-GCM", iv: new Uint8Array(iv) },
         aesKey,
-        aesCt,
+        new Uint8Array(aesCt),
       );
 
       return new Uint8Array(plaintext);
