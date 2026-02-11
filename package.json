@@ -49,8 +49,9 @@
     "@types/node": "latest",
     "idb-keyval": "^6.2.2",
     "playwright": "^1.58.2",
+    "tsx": "latest",
     "vitest": "^4.0.18",
-    "tsx": "latest"
+    "wasm-pqc-subtle": "^0.1.0"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"

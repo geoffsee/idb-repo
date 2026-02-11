@@ -122,7 +122,11 @@ async function main() {
     bundleForBrowser(
       [
         `import { IndexedDbKV } from '${ROOT}/src/lib.ts';`,
+        `import { WebCryptoEncryptionProvider } from '${ROOT}/src/encryption/web/web-provider.ts';`,
+        `import { WasmMlKemProvider } from '${ROOT}/src/encryption/wasm/wasm-provider.ts';`,
         `(globalThis as any).IndexedDbKV = IndexedDbKV;`,
+        `(globalThis as any).WebCryptoEncryptionProvider = WebCryptoEncryptionProvider;`,
+        `(globalThis as any).WasmMlKemProvider = WasmMlKemProvider;`,
       ].join("\n"),
       "idb-repo",
     ),
@@ -454,9 +458,111 @@ async function main() {
       ),
     );
 
+    // ===== Encryption Benchmarks =====
+    // Setup encryption providers
+    const aesProvider = new G.WebCryptoEncryptionProvider(
+      new Uint8Array(32).fill(42) // deterministic key for benchmarking
+    );
+    await aesProvider.initialize();
+
+    const wasmProvider = await G.WasmMlKemProvider.create();
+
+    const kvNoEncrypt = new G.IndexedDbKV({
+      dbName: "bench-no-encrypt",
+      cacheEntries: 0,
+    });
+
+    const kvAesEncrypt = new G.IndexedDbKV({
+      dbName: "bench-aes-encrypt",
+      cacheEntries: 0,
+      encryptionProvider: aesProvider,
+    });
+
+    const kvMlKemEncrypt = new G.IndexedDbKV({
+      dbName: "bench-mlkem-encrypt",
+      cacheEntries: 0,
+      encryptionProvider: wasmProvider,
+    });
+
+    const encTestData = { message: "Secret data", nested: { value: 12345 } };
+
+    // --- Write benchmarks ---
+    let encIdx = 0;
+    rows.push(
+      await bench(
+        "put (no encryption)",
+        "idb-repo",
+        async () => {
+          await kvNoEncrypt.put(`enc-${encIdx++}`, encTestData);
+        },
+        100,
+      ),
+    );
+    encIdx = 0;
+    rows.push(
+      await bench(
+        "put (AES-256-GCM)",
+        "idb-repo",
+        async () => {
+          await kvAesEncrypt.put(`enc-${encIdx++}`, encTestData);
+        },
+        100,
+      ),
+    );
+    encIdx = 0;
+    rows.push(
+      await bench(
+        "put (ML-KEM-1024)",
+        "idb-repo",
+        async () => {
+          await kvMlKemEncrypt.put(`enc-${encIdx++}`, encTestData);
+        },
+        100,
+      ),
+    );
+
+    // --- Read benchmarks ---
+    await kvNoEncrypt.put("enc-read", encTestData);
+    await kvAesEncrypt.put("enc-read", encTestData);
+    await kvMlKemEncrypt.put("enc-read", encTestData);
+
+    rows.push(
+      await bench(
+        "get (no encryption)",
+        "idb-repo",
+        async () => {
+          await kvNoEncrypt.get("enc-read", { type: "json" });
+        },
+        100,
+      ),
+    );
+    rows.push(
+      await bench(
+        "get (AES-256-GCM)",
+        "idb-repo",
+        async () => {
+          await kvAesEncrypt.get("enc-read", { type: "json" });
+        },
+        100,
+      ),
+    );
+    rows.push(
+      await bench(
+        "get (ML-KEM-1024)",
+        "idb-repo",
+        async () => {
+          await kvMlKemEncrypt.get("enc-read", { type: "json" });
+        },
+        100,
+      ),
+    );
+
     // cleanup
     kv.close();
     kvCached.close();
+    kvNoEncrypt.close();
+    kvAesEncrypt.close();
+    kvMlKemEncrypt.close();
 
     return rows;
   });
@@ -474,6 +580,9 @@ async function main() {
     "  - idb-repo opens one transaction per put/get (no batch API yet)",
   );
   console.log("  - 'cached hit' bypasses IndexedDB entirely (in-memory LRU)");
+  console.log("  - Encryption benchmarks show overhead of different providers:");
+  console.log("    - AES-256-GCM: 28 bytes overhead, standard Web Crypto API");
+  console.log("    - ML-KEM-1024: 1596 bytes overhead, post-quantum via WASM");
   console.log("  - Browser: Chromium (Playwright headless)");
   console.log();
 
