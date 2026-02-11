@@ -137,6 +137,93 @@ await kv.close();
 
 #### Pluggable Encryption
 
+`idb-repo` supports transparent encryption of all stored values using pluggable encryption providers.
+
+##### Built-in Encryption Providers
+
+| Provider | Algorithm | Use Case | Overhead | Performance | Browser | Node.js | Post-Quantum |
+|----------|-----------|----------|----------|-------------|---------|---------|--------------|
+| **WebCryptoEncryptionProvider** | AES-256-GCM | General purpose, high performance | 28 bytes | ⚡⚡⚡ Fastest (~0.01ms) | ✅ | ✅ | ❌ |
+| **PassphraseEncryptionProvider** | PBKDF2 + AES-256-GCM | User password-based encryption | 44 bytes | ⚡ Slow (~100ms init) | ✅ | ✅ | ❌ |
+| **WasmMlKemProvider** | ML-KEM-1024 + AES-256-GCM | Future-proof, post-quantum security | 1,596 bytes | ⚡⚡ Fast (~0.08ms) | ✅ | ✅ | ✅ |
+| **NodeProvider** | ML-KEM-1024 + AES-256-GCM | Node.js-only post-quantum | 1,596 bytes | ⚡⚡⚡ Fastest (~0.05ms) | ❌ | ✅ (24.7+) | ✅ |
+
+##### Quick Start Examples
+
+**Standard Encryption (AES-256-GCM)**
+```typescript
+import { createKV, WebCryptoEncryptionProvider } from "idb-repo";
+
+const provider = new WebCryptoEncryptionProvider(
+  new Uint8Array(32).fill(42) // Your 256-bit encryption key
+);
+await provider.initialize();
+
+const kv = createKV({ encryptionProvider: provider });
+```
+
+**Password-Based Encryption**
+```typescript
+import { PassphraseEncryptionProvider } from "idb-repo";
+
+const provider = await PassphraseEncryptionProvider.create("my-strong-password");
+const kv = createKV({ encryptionProvider: provider });
+```
+
+**Post-Quantum Encryption (Universal - Browser + Node.js)**
+```typescript
+import { WasmMlKemProvider } from "idb-repo";
+
+const provider = await WasmMlKemProvider.create();
+const kv = createKV({ encryptionProvider: provider });
+
+// Save keys for later use
+const { publicKey, secretKey } = provider.exportKeys();
+localStorage.setItem("mlkem-keys", JSON.stringify({
+  pub: Array.from(publicKey),
+  sec: Array.from(secretKey)
+}));
+```
+
+**Post-Quantum Encryption (Node.js Only)**
+```typescript
+import { NodeProvider } from "idb-repo";
+
+// Node.js 24.7+ only - uses native ML-KEM implementation
+const provider = await NodeProvider.create();
+const kv = createKV({ encryptionProvider: provider });
+```
+
+##### How to Choose an Encryption Provider
+
+**Use `WebCryptoEncryptionProvider` when:**
+- ✅ You need strong encryption with minimal overhead
+- ✅ Performance is critical (28 bytes overhead, ~0.01ms)
+- ✅ Standard AES-256-GCM security is sufficient
+- ✅ You want maximum compatibility
+
+**Use `PassphraseEncryptionProvider` when:**
+- ✅ Users need to unlock their data with a password
+- ✅ You want secure key derivation from human-memorable passwords
+- ⚠️ You can accept slower initialization (~100ms for PBKDF2)
+
+**Use `WasmMlKemProvider` when:**
+- ✅ You need post-quantum security (resistant to quantum attacks)
+- ✅ You want universal compatibility (browser + Node.js + Bun)
+- ✅ You're storing data that must remain secure for 10+ years
+- ⚠️ You can accept larger overhead (1,596 bytes per value)
+- ⚠️ Performance ~7x slower than AES, but still fast (~12,000 ops/sec)
+
+**Use `NodeProvider` when:**
+- ✅ You need post-quantum security in Node.js only
+- ✅ You have Node.js 24.7 or later
+- ✅ You want the fastest ML-KEM implementation available
+- ❌ Browser support is not required
+
+##### Custom Encryption Provider
+
+You can also implement your own encryption provider:
+
 ```typescript
 import { createKV, BaseEncryptionProvider } from "idb-repo";
 
@@ -160,6 +247,15 @@ const kv = createKV({
   encryptionKeyId: "tenant-a",
 });
 ```
+
+##### Security Considerations
+
+- **Key Management**: Always store encryption keys securely. Never hardcode keys in source code.
+- **Post-Quantum**: If you're storing data that must remain secret beyond 2030, consider post-quantum encryption (WasmMlKemProvider or NodeProvider).
+- **Overhead**: Encryption adds overhead to each value. ML-KEM adds ~1.5 KB per value due to per-value key encapsulation.
+- **Performance**: All providers are fast enough for most use cases. Even ML-KEM achieves ~12,000-14,000 operations/sec.
+
+For detailed benchmarks, see `bench/encryption-providers.ts`.
 
 #### Metadata and Type Hints
 
