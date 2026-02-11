@@ -1,4 +1,5 @@
 export {
+  createKV,
   IndexedDbKV,
   createIndexedDbKV,
   kvGetText,
@@ -14,11 +15,12 @@ export {
 } from "./src/storage-backend";
 export type { StorageBackend } from "./src/storage-backend";
 
+export { BaseEncryptionProvider } from "./src/encryption/encryption-provider";
+
 export {
-  BaseEncryptionProvider,
   WebCryptoEncryptionProvider,
   PassphraseEncryptionProvider,
-} from "./src/encryption/encryption-provider";
+} from "./src/encryption/web/web-provider";
 
 export { WasmMlKemProvider } from "./src/encryption/wasm/wasm-provider";
 
