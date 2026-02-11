@@ -141,21 +141,22 @@ await kv.close();
 
 ##### Built-in Encryption Providers
 
-| Provider | Algorithm | Use Case | Overhead | Performance | Browser | Node.js | Post-Quantum |
-|----------|-----------|----------|----------|-------------|---------|---------|--------------|
-| **WebCryptoEncryptionProvider** | AES-256-GCM | General purpose, high performance | 28 bytes | ⚡⚡⚡ Fastest (~0.01ms) | ✅ | ✅ | ❌ |
-| **PassphraseEncryptionProvider** | PBKDF2 + AES-256-GCM | User password-based encryption | 44 bytes | ⚡ Slow (~100ms init) | ✅ | ✅ | ❌ |
-| **WasmMlKemProvider** | ML-KEM-1024 + AES-256-GCM | Future-proof, post-quantum security | 1,596 bytes | ⚡⚡ Fast (~0.08ms) | ✅ | ✅ | ✅ |
-| **NodeProvider** | ML-KEM-1024 + AES-256-GCM | Node.js-only post-quantum | 1,596 bytes | ⚡⚡⚡ Fastest (~0.05ms) | ❌ | ✅ (24.7+) | ✅ |
+| Provider                         | Algorithm                 | Use Case                            | Overhead    | Performance              | Browser | Node.js    | Post-Quantum |
+| -------------------------------- | ------------------------- | ----------------------------------- | ----------- | ------------------------ | ------- | ---------- | ------------ |
+| **WebCryptoEncryptionProvider**  | AES-256-GCM               | General purpose, high performance   | 28 bytes    | ⚡⚡⚡ Fastest (~0.01ms) | ✅      | ✅         | ❌           |
+| **PassphraseEncryptionProvider** | PBKDF2 + AES-256-GCM      | User password-based encryption      | 44 bytes    | ⚡ Slow (~100ms init)    | ✅      | ✅         | ❌           |
+| **WasmMlKemProvider**            | ML-KEM-1024 + AES-256-GCM | Future-proof, post-quantum security | 1,596 bytes | ⚡⚡ Fast (~0.08ms)      | ✅      | ✅         | ✅           |
+| **NodeProvider**                 | ML-KEM-1024 + AES-256-GCM | Node.js-only post-quantum           | 1,596 bytes | ⚡⚡⚡ Fastest (~0.05ms) | ❌      | ✅ (24.7+) | ✅           |
 
 ##### Quick Start Examples
 
 **Standard Encryption (AES-256-GCM)**
+
 ```typescript
 import { createKV, WebCryptoEncryptionProvider } from "idb-repo";
 
 const provider = new WebCryptoEncryptionProvider(
-  new Uint8Array(32).fill(42) // Your 256-bit encryption key
+  new Uint8Array(32).fill(42), // Your 256-bit encryption key
 );
 await provider.initialize();
 
@@ -163,14 +164,17 @@ const kv = createKV({ encryptionProvider: provider });
 ```
 
 **Password-Based Encryption**
+
 ```typescript
 import { PassphraseEncryptionProvider } from "idb-repo";
 
-const provider = await PassphraseEncryptionProvider.create("my-strong-password");
+const provider =
+  await PassphraseEncryptionProvider.create("my-strong-password");
 const kv = createKV({ encryptionProvider: provider });
 ```
 
 **Post-Quantum Encryption (Universal - Browser + Node.js)**
+
 ```typescript
 import { WasmMlKemProvider } from "idb-repo";
 
@@ -179,13 +183,17 @@ const kv = createKV({ encryptionProvider: provider });
 
 // Save keys for later use
 const { publicKey, secretKey } = provider.exportKeys();
-localStorage.setItem("mlkem-keys", JSON.stringify({
-  pub: Array.from(publicKey),
-  sec: Array.from(secretKey)
-}));
+localStorage.setItem(
+  "mlkem-keys",
+  JSON.stringify({
+    pub: Array.from(publicKey),
+    sec: Array.from(secretKey),
+  }),
+);
 ```
 
 **Post-Quantum Encryption (Node.js Only)**
+
 ```typescript
 import { NodeProvider } from "idb-repo";
 
@@ -197,17 +205,20 @@ const kv = createKV({ encryptionProvider: provider });
 ##### How to Choose an Encryption Provider
 
 **Use `WebCryptoEncryptionProvider` when:**
+
 - ✅ You need strong encryption with minimal overhead
 - ✅ Performance is critical (28 bytes overhead, ~0.01ms)
 - ✅ Standard AES-256-GCM security is sufficient
 - ✅ You want maximum compatibility
 
 **Use `PassphraseEncryptionProvider` when:**
+
 - ✅ Users need to unlock their data with a password
 - ✅ You want secure key derivation from human-memorable passwords
 - ⚠️ You can accept slower initialization (~100ms for PBKDF2)
 
 **Use `WasmMlKemProvider` when:**
+
 - ✅ You need post-quantum security (resistant to quantum attacks)
 - ✅ You want universal compatibility (browser + Node.js + Bun)
 - ✅ You're storing data that must remain secure for 10+ years
@@ -215,6 +226,7 @@ const kv = createKV({ encryptionProvider: provider });
 - ⚠️ Performance ~7x slower than AES, but still fast (~12,000 ops/sec)
 
 **Use `NodeProvider` when:**
+
 - ✅ You need post-quantum security in Node.js only
 - ✅ You have Node.js 24.7 or later
 - ✅ You want the fastest ML-KEM implementation available
@@ -254,12 +266,12 @@ const kv = createKV({
 
 **Recovery Strategy by Provider:**
 
-| Provider | What to Save | Recovery Process | Storage Recommendation |
-|----------|-------------|------------------|------------------------|
-| **WebCryptoEncryptionProvider** | 32-byte key | Re-initialize with same key | Secure backend, env vars, encrypted localStorage |
-| **PassphraseEncryptionProvider** | Passphrase only (salt is auto-saved) | User enters passphrase | User's memory, password manager |
-| **WasmMlKemProvider** | Public key (1568 bytes) + Secret key (3168 bytes) | Import saved keys | Secure backend, encrypted localStorage |
-| **NodeProvider** | CryptoKey objects or raw bytes | Re-generate or import | Secure backend, filesystem (encrypted) |
+| Provider                         | What to Save                                      | Recovery Process            | Storage Recommendation                           |
+| -------------------------------- | ------------------------------------------------- | --------------------------- | ------------------------------------------------ |
+| **WebCryptoEncryptionProvider**  | 32-byte key                                       | Re-initialize with same key | Secure backend, env vars, encrypted localStorage |
+| **PassphraseEncryptionProvider** | Passphrase only (salt is auto-saved)              | User enters passphrase      | User's memory, password manager                  |
+| **WasmMlKemProvider**            | Public key (1568 bytes) + Secret key (3168 bytes) | Import saved keys           | Secure backend, encrypted localStorage           |
+| **NodeProvider**                 | CryptoKey objects or raw bytes                    | Re-generate or import       | Secure backend, filesystem (encrypted)           |
 
 **Example: Persisting and Recovering AES Keys (Easy Way)**
 
@@ -295,7 +307,7 @@ const key = crypto.getRandomValues(new Uint8Array(32));
 // Save to your secure backend
 await fetch("/api/save-key", {
   method: "POST",
-  body: JSON.stringify({ key: KeySerializer.serialize(key) })
+  body: JSON.stringify({ key: KeySerializer.serialize(key) }),
 });
 
 const provider = new WebCryptoEncryptionProvider(key);
@@ -315,7 +327,11 @@ const kv = createKV({ encryptionProvider: recoveredProvider });
 **Example: Persisting and Recovering Passphrase-Based Encryption (Easy Way)**
 
 ```typescript
-import { LocalStorageKeyManager, PassphraseEncryptionProvider, createKV } from "idb-repo";
+import {
+  LocalStorageKeyManager,
+  PassphraseEncryptionProvider,
+  createKV,
+} from "idb-repo";
 
 // --- First Time Setup ---
 const provider = await PassphraseEncryptionProvider.create("user-password");
@@ -365,7 +381,7 @@ import { BackendKeyManager, KeySerializer } from "idb-repo";
 // Initialize backend manager with your API
 const keyManager = new BackendKeyManager(
   "https://api.example.com",
-  "your-auth-token"
+  "your-auth-token",
 );
 
 // --- First Time Setup ---
@@ -375,7 +391,7 @@ const { publicKey, secretKey } = provider.exportKeys();
 await keyManager.saveKey("user-123", {
   type: "ml-kem-1024",
   publicKey: KeySerializer.serialize(publicKey),
-  secretKey: KeySerializer.serialize(secretKey)
+  secretKey: KeySerializer.serialize(secretKey),
 });
 
 // --- Recovery ---
@@ -451,8 +467,5 @@ The primary entry point for creating a storage instance.
 - `close()` → Promise
 
 ## License
+
 MIT 2026 Copyright © Seemueller
-
-
-
-

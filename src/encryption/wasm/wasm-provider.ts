@@ -1,8 +1,5 @@
 import { BaseEncryptionProvider } from "../encryption-provider";
-import type {
-  KemKeyPair,
-  CiphertextAndSharedSecret,
-} from "wasm-pqc-subtle";
+import type { KemKeyPair, CiphertextAndSharedSecret } from "wasm-pqc-subtle";
 
 /**
  * Post-quantum hybrid encryption provider using ML-KEM-1024 (via WASM) for

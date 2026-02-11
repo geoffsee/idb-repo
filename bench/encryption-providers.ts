@@ -133,9 +133,7 @@ function printResults(results: BenchResult[]) {
     console.log("-".repeat(100));
     for (const r of overheadResults) {
       console.log(
-        [r.provider.padEnd(40), r.overhead.toString().padStart(20)].join(
-          " | ",
-        ),
+        [r.provider.padEnd(40), r.overhead.toString().padStart(20)].join(" | "),
       );
     }
   }
