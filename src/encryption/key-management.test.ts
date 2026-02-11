@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import {
-  LocalStorageKeyManager,
-  KeySerializer,
-} from "./key-management";
+import { LocalStorageKeyManager, KeySerializer } from "./key-management";
 import { WasmMlKemProvider } from "./wasm/wasm-provider";
 
 // Mock localStorage for Node.js tests

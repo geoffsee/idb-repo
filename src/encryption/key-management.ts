@@ -197,7 +197,10 @@ export class KeySerializer {
  * (You would implement this with your actual backend API)
  */
 export class BackendKeyManager {
-  constructor(private apiUrl: string, private authToken: string) {}
+  constructor(
+    private apiUrl: string,
+    private authToken: string,
+  ) {}
 
   /**
    * Save key to secure backend

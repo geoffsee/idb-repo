@@ -1,113 +1,140 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <title>WasmMlKemProvider Browser Test</title>
-  <style>
-    body { font-family: monospace; padding: 20px; }
-    .pass { color: green; }
-    .fail { color: red; }
-    pre { background: #f5f5f5; padding: 10px; }
-  </style>
-</head>
-<body>
-  <h1>WasmMlKemProvider Browser Test</h1>
-  <div id="results"></div>
-
-  <script type="module">
-    const results = document.getElementById('results');
-
-    function log(message, isPass = null) {
-      const div = document.createElement('div');
-      if (isPass !== null) {
-        div.className = isPass ? 'pass' : 'fail';
-        div.textContent = (isPass ? '✓ ' : '✗ ') + message;
-      } else {
-        div.textContent = message;
+  <head>
+    <meta charset="UTF-8" />
+    <title>WasmMlKemProvider Browser Test</title>
+    <style>
+      body {
+        font-family: monospace;
+        padding: 20px;
       }
-      results.appendChild(div);
-    }
-
-    async function runTests() {
-      try {
-        log('Loading WASM module...');
-        const wasmPqc = await import('https://cdn.jsdelivr.net/npm/wasm-pqc-subtle@0.1.0/wasm_pqc_subtle.js');
-        await wasmPqc.default();
-        log('WASM module loaded', true);
-
-        // Test 1: Generate keypair
-        log('\nTest 1: Generate ML-KEM-1024 keypair');
-        const keypair = wasmPqc.ml_kem_1024_generate_keypair();
-        log(`Public key: ${keypair.public_key.length} bytes`, true);
-        log(`Secret key: ${keypair.secret_key.length} bytes`, true);
-
-        // Test 2: Encapsulate
-        log('\nTest 2: Encapsulate (generate shared secret)');
-        const { ciphertext, shared_secret } = wasmPqc.ml_kem_1024_encapsulate(keypair.public_key);
-        log(`KEM ciphertext: ${ciphertext.length} bytes`, true);
-        log(`Shared secret: ${shared_secret.length} bytes`, true);
-
-        // Test 3: Decapsulate
-        log('\nTest 3: Decapsulate (recover shared secret)');
-        const recovered = wasmPqc.ml_kem_1024_decapsulate(keypair.secret_key, ciphertext);
-        const match = recovered.every((v, i) => v === shared_secret[i]);
-        log(`Secrets match: ${match}`, match);
-
-        // Test 4: Hybrid encryption (ML-KEM + AES-256-GCM)
-        log('\nTest 4: Hybrid encryption (ML-KEM + AES-256-GCM)');
-        const plaintext = new TextEncoder().encode('Post-quantum secure! 🔒');
-
-        // Import shared secret as AES key
-        const aesKey = await crypto.subtle.importKey(
-          'raw',
-          shared_secret,
-          { name: 'AES-GCM', length: 256 },
-          false,
-          ['encrypt', 'decrypt']
-        );
-
-        // Encrypt with AES-GCM
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const encrypted = await crypto.subtle.encrypt(
-          { name: 'AES-GCM', iv },
-          aesKey,
-          plaintext
-        );
-
-        log(`Encrypted: ${encrypted.byteLength} bytes`, true);
-
-        // Decrypt using recovered shared secret
-        const recoveredKey = await crypto.subtle.importKey(
-          'raw',
-          recovered,
-          { name: 'AES-GCM', length: 256 },
-          false,
-          ['decrypt']
-        );
-
-        const decrypted = await crypto.subtle.decrypt(
-          { name: 'AES-GCM', iv },
-          recoveredKey,
-          encrypted
-        );
-
-        const decryptedText = new TextDecoder().decode(decrypted);
-        log(`Decrypted: "${decryptedText}"`, decryptedText === 'Post-quantum secure! 🔒');
-
-        // Test 5: Calculate overhead
-        log('\nTest 5: Encryption overhead');
-        const overhead = ciphertext.length + iv.length + (encrypted.byteLength - plaintext.length);
-        log(`Total overhead: ${overhead} bytes (1568 KEM + 12 IV + 16 tag = 1596)`, overhead === 1596);
-
-        log('\n🎉 All tests passed! ML-KEM-1024 works in browser via WASM!', true);
-
-      } catch (e) {
-        log(`\n❌ Error: ${e.message}`, false);
-        console.error(e);
+      .pass {
+        color: green;
       }
-    }
+      .fail {
+        color: red;
+      }
+      pre {
+        background: #f5f5f5;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WasmMlKemProvider Browser Test</h1>
+    <div id="results"></div>
 
-    runTests();
-  </script>
-</body>
+    <script type="module">
+      const results = document.getElementById("results");
+
+      function log(message, isPass = null) {
+        const div = document.createElement("div");
+        if (isPass !== null) {
+          div.className = isPass ? "pass" : "fail";
+          div.textContent = (isPass ? "✓ " : "✗ ") + message;
+        } else {
+          div.textContent = message;
+        }
+        results.appendChild(div);
+      }
+
+      async function runTests() {
+        try {
+          log("Loading WASM module...");
+          const wasmPqc =
+            await import("https://cdn.jsdelivr.net/npm/wasm-pqc-subtle@0.1.0/wasm_pqc_subtle.js");
+          await wasmPqc.default();
+          log("WASM module loaded", true);
+
+          // Test 1: Generate keypair
+          log("\nTest 1: Generate ML-KEM-1024 keypair");
+          const keypair = wasmPqc.ml_kem_1024_generate_keypair();
+          log(`Public key: ${keypair.public_key.length} bytes`, true);
+          log(`Secret key: ${keypair.secret_key.length} bytes`, true);
+
+          // Test 2: Encapsulate
+          log("\nTest 2: Encapsulate (generate shared secret)");
+          const { ciphertext, shared_secret } = wasmPqc.ml_kem_1024_encapsulate(
+            keypair.public_key,
+          );
+          log(`KEM ciphertext: ${ciphertext.length} bytes`, true);
+          log(`Shared secret: ${shared_secret.length} bytes`, true);
+
+          // Test 3: Decapsulate
+          log("\nTest 3: Decapsulate (recover shared secret)");
+          const recovered = wasmPqc.ml_kem_1024_decapsulate(
+            keypair.secret_key,
+            ciphertext,
+          );
+          const match = recovered.every((v, i) => v === shared_secret[i]);
+          log(`Secrets match: ${match}`, match);
+
+          // Test 4: Hybrid encryption (ML-KEM + AES-256-GCM)
+          log("\nTest 4: Hybrid encryption (ML-KEM + AES-256-GCM)");
+          const plaintext = new TextEncoder().encode("Post-quantum secure! 🔒");
+
+          // Import shared secret as AES key
+          const aesKey = await crypto.subtle.importKey(
+            "raw",
+            shared_secret,
+            { name: "AES-GCM", length: 256 },
+            false,
+            ["encrypt", "decrypt"],
+          );
+
+          // Encrypt with AES-GCM
+          const iv = crypto.getRandomValues(new Uint8Array(12));
+          const encrypted = await crypto.subtle.encrypt(
+            { name: "AES-GCM", iv },
+            aesKey,
+            plaintext,
+          );
+
+          log(`Encrypted: ${encrypted.byteLength} bytes`, true);
+
+          // Decrypt using recovered shared secret
+          const recoveredKey = await crypto.subtle.importKey(
+            "raw",
+            recovered,
+            { name: "AES-GCM", length: 256 },
+            false,
+            ["decrypt"],
+          );
+
+          const decrypted = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv },
+            recoveredKey,
+            encrypted,
+          );
+
+          const decryptedText = new TextDecoder().decode(decrypted);
+          log(
+            `Decrypted: "${decryptedText}"`,
+            decryptedText === "Post-quantum secure! 🔒",
+          );
+
+          // Test 5: Calculate overhead
+          log("\nTest 5: Encryption overhead");
+          const overhead =
+            ciphertext.length +
+            iv.length +
+            (encrypted.byteLength - plaintext.length);
+          log(
+            `Total overhead: ${overhead} bytes (1568 KEM + 12 IV + 16 tag = 1596)`,
+            overhead === 1596,
+          );
+
+          log(
+            "\n🎉 All tests passed! ML-KEM-1024 works in browser via WASM!",
+            true,
+          );
+        } catch (e) {
+          log(`\n❌ Error: ${e.message}`, false);
+          console.error(e);
+        }
+      }
+
+      runTests();
+    </script>
+  </body>
 </html>

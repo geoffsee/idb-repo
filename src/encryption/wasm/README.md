@@ -21,13 +21,13 @@ npm install wasm-pqc-subtle
 ### Basic Usage
 
 ```typescript
-import { WasmMlKemProvider } from 'idb-repo';
+import { WasmMlKemProvider } from "idb-repo";
 
 // Create provider with auto-generated keypair
 const provider = await WasmMlKemProvider.create();
 
 // Encrypt data
-const plaintext = new TextEncoder().encode('Secret message');
+const plaintext = new TextEncoder().encode("Secret message");
 const ciphertext = await provider.encrypt(plaintext);
 
 // Decrypt data
@@ -38,18 +38,18 @@ console.log(new TextDecoder().decode(decrypted)); // "Secret message"
 ### With KV Storage
 
 ```typescript
-import { IndexedDbKV, WasmMlKemProvider } from 'idb-repo';
+import { IndexedDbKV, WasmMlKemProvider } from "idb-repo";
 
 const provider = await WasmMlKemProvider.create();
 
 const kv = new IndexedDbKV({
-  dbName: 'secure-storage',
-  encryptionProvider: provider
+  dbName: "secure-storage",
+  encryptionProvider: provider,
 });
 
 // All data is now encrypted with post-quantum security
-await kv.put('secret', { password: '123456' });
-const data = await kv.get('secret');
+await kv.put("secret", { password: "123456" });
+const data = await kv.get("secret");
 ```
 
 ### Key Persistence
@@ -60,17 +60,17 @@ const provider = await WasmMlKemProvider.create();
 const { publicKey, secretKey } = provider.exportKeys();
 
 // Save keys to localStorage, file, etc.
-localStorage.setItem('mlkem-pub', btoa(String.fromCharCode(...publicKey)));
-localStorage.setItem('mlkem-sec', btoa(String.fromCharCode(...secretKey)));
+localStorage.setItem("mlkem-pub", btoa(String.fromCharCode(...publicKey)));
+localStorage.setItem("mlkem-sec", btoa(String.fromCharCode(...secretKey)));
 
 // Later, restore from saved keys
 const pubKeyBytes = Uint8Array.from(
-  atob(localStorage.getItem('mlkem-pub')!),
-  c => c.charCodeAt(0)
+  atob(localStorage.getItem("mlkem-pub")!),
+  (c) => c.charCodeAt(0),
 );
 const secKeyBytes = Uint8Array.from(
-  atob(localStorage.getItem('mlkem-sec')!),
-  c => c.charCodeAt(0)
+  atob(localStorage.getItem("mlkem-sec")!),
+  (c) => c.charCodeAt(0),
 );
 
 const restored = await WasmMlKemProvider.fromKeys(pubKeyBytes, secKeyBytes);
@@ -79,6 +79,7 @@ const restored = await WasmMlKemProvider.fromKeys(pubKeyBytes, secKeyBytes);
 ## Browser Support
 
 Works in all modern browsers via WebAssembly:
+
 - Chrome 89+
 - Firefox 90+
 - Safari 15+
@@ -103,6 +104,7 @@ Works in all modern browsers via WebAssembly:
 ## Overhead
 
 Each encrypted value adds **1596 bytes**:
+
 - ML-KEM-1024 ciphertext: 1568 bytes
 - AES-GCM IV: 12 bytes
 - AES-GCM authentication tag: 16 bytes
@@ -117,16 +119,17 @@ Each encrypted value adds **1596 bytes**:
 
 ## Comparison with Other Providers
 
-| Provider | Algorithm | Overhead | Post-Quantum | Browser | Node.js |
-|----------|-----------|----------|--------------|---------|---------|
-| `WebCryptoEncryptionProvider` | AES-256-GCM | 28 bytes | ❌ | ✅ | ✅ |
-| `PassphraseEncryptionProvider` | PBKDF2 + AES-256-GCM | 44 bytes | ❌ | ✅ | ✅ |
-| `NodeProvider` | ML-KEM-1024 + AES-256-GCM | 1596 bytes | ✅ | ❌ | ✅ (24.7+) |
-| `WasmMlKemProvider` | ML-KEM-1024 + AES-256-GCM | 1596 bytes | ✅ | ✅ | ✅ |
+| Provider                       | Algorithm                 | Overhead   | Post-Quantum | Browser | Node.js    |
+| ------------------------------ | ------------------------- | ---------- | ------------ | ------- | ---------- |
+| `WebCryptoEncryptionProvider`  | AES-256-GCM               | 28 bytes   | ❌           | ✅      | ✅         |
+| `PassphraseEncryptionProvider` | PBKDF2 + AES-256-GCM      | 44 bytes   | ❌           | ✅      | ✅         |
+| `NodeProvider`                 | ML-KEM-1024 + AES-256-GCM | 1596 bytes | ✅           | ❌      | ✅ (24.7+) |
+| `WasmMlKemProvider`            | ML-KEM-1024 + AES-256-GCM | 1596 bytes | ✅           | ✅      | ✅         |
 
 ## Performance
 
 ML-KEM operations via WASM are fast:
+
 - Key generation: ~1ms
 - Encapsulation: ~0.5ms
 - Decapsulation: ~0.5ms
@@ -135,11 +138,13 @@ ML-KEM operations via WASM are fast:
 ## When to Use
 
 **Use WasmMlKemProvider when:**
+
 - You need post-quantum security
 - You want browser compatibility
 - You're storing data that must remain secure for 10+ years
 
 **Use WebCryptoEncryptionProvider when:**
+
 - Post-quantum isn't required
 - You want minimal overhead (28 bytes vs 1596 bytes)
 - Performance is critical
