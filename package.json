@@ -1,6 +1,6 @@
 {
   "name": "idb-repo",
-  "version": "1.1.2",
+  "version": "1.2.2",
   "description": "A high-performance IndexedDB-based key-value storage implementation with caching, TTL support, and full TypeScript support",
   "type": "module",
   "main": "./dist/index.js",
@@ -13,6 +13,11 @@
       "node": "./dist/index.js",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./repo": {
+      "types": "./dist/index-repo.d.ts",
+      "import": "./dist/repo.js",
+      "default": "./dist/repo.js"
     }
   },
   "types": "./dist/index.d.ts",
@@ -22,7 +27,8 @@
   "scripts": {
     "build:node": "bun build ./index-node.ts --target node --outdir ./dist --minify --outfile index.js",
     "build:browser": "bun build ./index-browser.ts --target browser --outdir ./dist --minify --outfile browser.js",
-    "build": "rm -rf dist/ && npm run build:node && npm run build:browser && tsc --emitDeclarationOnly -p tsconfig.build.json && rm -rf dist/src",
+    "build:repo": "bun build ./index-repo.ts --target node --outdir ./dist --minify --outfile repo.js",
+    "build": "rm -rf dist/ && npm run build:node && npm run build:browser && npm run build:repo && tsc --emitDeclarationOnly -p tsconfig.build.json && rm -rf dist/src",
     "test:encryption-provider:node": "cd src/encryption/node && node --import=tsx --test node-provider-integration.test.node.ts"
   },
   "keywords": [

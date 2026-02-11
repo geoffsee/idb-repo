@@ -425,6 +425,60 @@ const kv = createKV({ encryptionProvider: provider });
 
 For detailed benchmarks, see `bench/encryption-providers.ts`.
 
+#### Repository Pattern (StorageAdapter)
+
+`idb-repo` includes a generic `StorageAdapter` interface and a ready-made adapter that bridges a `KVNamespace` to the repository pattern, giving you typed CRUD, pagination, filtering, and sorting over any KV backend.
+
+```typescript
+import { createKV } from "idb-repo";
+import { createIdbRepoAdapter } from "idb-repo/repo";
+
+interface User {
+  id: string;
+  name: string;
+  age: number;
+  active: boolean;
+}
+
+// Use any KVNamespace — IndexedDB in the browser, memory for tests, etc.
+const kv = createKV();
+const users = createIdbRepoAdapter<User, string>({ kv, prefix: "user:" });
+
+// Save
+await users.save({ id: "u1", name: "Alice", age: 30, active: true });
+await users.save({ id: "u2", name: "Bob", age: 25, active: false });
+await users.save({ id: "u3", name: "Carol", age: 35, active: true });
+
+// Find
+const alice = await users.findById("u1");
+const batch = await users.findMany(["u1", "u3"]);
+const all = await users.findAll();
+
+// Delete & existence
+await users.exists("u1"); // true
+await users.delete("u1"); // true (existed)
+await users.count(); // 2
+
+// Paginated listing with filter + sort
+const page = await users.findPaginated({
+  page: 1,
+  size: 10,
+  filter: { active: true },
+  sort: "age:desc",
+});
+// { items: [Carol, Alice], total: 2, page: 1, size: 10, pages: 1 }
+```
+
+For unit tests, swap in an in-memory backend so no IndexedDB is needed:
+
+```typescript
+import { KVStorageAdapter, MemoryStorageBackend } from "idb-repo";
+import { createIdbRepoAdapter } from "idb-repo/repo";
+
+const kv = new KVStorageAdapter(new MemoryStorageBackend());
+const repo = createIdbRepoAdapter<MyEntity, string>({ kv });
+```
+
 #### Metadata and Type Hints
 
 ```typescript
