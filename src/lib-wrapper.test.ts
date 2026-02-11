@@ -1,5 +1,6 @@
 import { it, expect, describe, beforeEach, mock } from "bun:test";
 import { withKVFeatures } from "./lib-wrapper.ts";
+import type { KVListResult, KVNamespace } from "./types";
 
 /** Create a stub KVNamespace where every method is a mock. */
 function createMockKV(overrides?: Partial<KVNamespace>): KVNamespace {

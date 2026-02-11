@@ -80,9 +80,11 @@ describe("KVStorageAdapter with MemoryStorageBackend", () => {
         const kv = new KVStorageAdapter(backend);
         
         await kv.put("text", "some text");
-        expect(await kvGetText(kv, "text")).toBe("some text");
+        const textValue = await kvGetText(kv, "text");
+        expect(textValue).toBe("some text");
         
         await kv.put("json", { a: 1 });
-        expect(await kvGetJson(kv, "json")).toEqual({ a: 1 });
+        const jsonValue = await kvGetJson<{ a: number }>(kv, "json");
+        expect(jsonValue).toEqual({ a: 1 });
     });
 });

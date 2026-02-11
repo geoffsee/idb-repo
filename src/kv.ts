@@ -49,3 +49,21 @@ export async function kvGetStream(
 ): Promise<ReadableStream<Uint8Array> | null> {
     return (await kv.get(key, { type: "stream", cacheTtl })) as ReadableStream<Uint8Array> | null;
 }
+
+type CreateKVOptions = ConstructorParameters<typeof IndexedDbKV>[0] & { forceMemory?: boolean };
+
+function adapterOptions(opts?: CreateKVOptions) {
+    return { cacheEntries: opts?.cacheEntries };
+}
+
+export function createKV(opts?: CreateKVOptions): KVNamespace {
+    if (opts?.forceMemory) {
+        return new KVStorageAdapter(new MemoryStorageBackend(), adapterOptions(opts));
+    }
+
+    if (typeof globalThis.indexedDB === "undefined") {
+        return new KVStorageAdapter(new MemoryStorageBackend(), adapterOptions(opts));
+    }
+
+    return new IndexedDbKV(opts);
+}

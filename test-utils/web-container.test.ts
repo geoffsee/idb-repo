@@ -1,3 +1,5 @@
+// Tell TypeScript where to find the types for bun:test
+/// <reference types="bun" />
 import { it, expect, describe, afterAll, beforeAll } from 'bun:test';
 import { WebContainer } from './web-container';
 

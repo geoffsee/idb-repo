@@ -1,5 +1,5 @@
 import type { KVListOptions, KVListResult, StoredRecord, KVListKey } from "./types";
-import { StorageBackend } from "./storage-backend";
+import type { StorageBackend } from "./storage-backend";
 import { nowMs, toEpochSeconds } from "./time-utils";
 import { encodeCursor, decodeCursor } from "./internal/cursor";
 

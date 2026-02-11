@@ -20,6 +20,7 @@
   "exclude": [
     "src/**/*.test.ts",
     "bench",
-    "node_modules"
+    "node_modules",
+    "test-utils"
   ]
 }

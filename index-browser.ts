@@ -1,9 +1,9 @@
 import { 
     IndexedDbKV,
-    KVNamespace,
     KVStorageAdapter,
     MemoryStorageBackend
 } from "./index";
+import type { KVNamespace } from "./index";
 
 export * from "./index";
 

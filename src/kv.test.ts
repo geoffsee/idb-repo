@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { IndexedDbKV, createIndexedDbKV, kvGetText, kvGetJson, kvGetArrayBuffer, kvGetStream } from "./kv";
+import type { KVNamespace } from "./types";
 
 describe("IndexedDbKV", () => {
     describe("constructor and factory", () => {
