@@ -174,6 +174,8 @@ const kv = createKV({ encryptionProvider: provider });
 ```
 
 **Post-Quantum Encryption (Universal - Browser + Node.js)**
+## IMPORTANT 
+> Storing keys in `localStorage` is insecure!
 
 ```typescript
 import { WasmMlKemProvider } from "idb-repo";
