@@ -248,12 +248,162 @@ const kv = createKV({
 });
 ```
 
+##### Key Persistence and Recovery
+
+**Critical:** If you lose your encryption keys, your data is **permanently unrecoverable**. Always persist keys securely.
+
+**Recovery Strategy by Provider:**
+
+| Provider | What to Save | Recovery Process | Storage Recommendation |
+|----------|-------------|------------------|------------------------|
+| **WebCryptoEncryptionProvider** | 32-byte key | Re-initialize with same key | Secure backend, env vars, encrypted localStorage |
+| **PassphraseEncryptionProvider** | Passphrase only (salt is auto-saved) | User enters passphrase | User's memory, password manager |
+| **WasmMlKemProvider** | Public key (1568 bytes) + Secret key (3168 bytes) | Import saved keys | Secure backend, encrypted localStorage |
+| **NodeProvider** | CryptoKey objects or raw bytes | Re-generate or import | Secure backend, filesystem (encrypted) |
+
+**Example: Persisting and Recovering AES Keys (Easy Way)**
+
+Using the built-in `LocalStorageKeyManager`:
+
+```typescript
+import { LocalStorageKeyManager, createKV } from "idb-repo";
+
+// --- First Time Setup ---
+const key = crypto.getRandomValues(new Uint8Array(32));
+LocalStorageKeyManager.saveAESKey(key);
+
+const provider = await LocalStorageKeyManager.loadAESProvider();
+const kv = createKV({ encryptionProvider: provider });
+
+// --- Subsequent Sessions ---
+if (!LocalStorageKeyManager.hasKey()) {
+  throw new Error("No encryption key found!");
+}
+
+const provider = await LocalStorageKeyManager.loadAESProvider();
+const kv = createKV({ encryptionProvider: provider });
+```
+
+**Manual Approach (More Control):**
+
+```typescript
+import { WebCryptoEncryptionProvider, KeySerializer } from "idb-repo";
+
+// --- First Time Setup ---
+const key = crypto.getRandomValues(new Uint8Array(32));
+
+// Save to your secure backend
+await fetch("/api/save-key", {
+  method: "POST",
+  body: JSON.stringify({ key: KeySerializer.serialize(key) })
+});
+
+const provider = new WebCryptoEncryptionProvider(key);
+await provider.initialize();
+
+// --- Recovery / Subsequent Sessions ---
+const response = await fetch("/api/load-key");
+const { key: encodedKey } = await response.json();
+const recoveredKey = KeySerializer.deserialize(encodedKey);
+
+const recoveredProvider = new WebCryptoEncryptionProvider(recoveredKey);
+await recoveredProvider.initialize();
+
+const kv = createKV({ encryptionProvider: recoveredProvider });
+```
+
+**Example: Persisting and Recovering Passphrase-Based Encryption (Easy Way)**
+
+```typescript
+import { LocalStorageKeyManager, PassphraseEncryptionProvider, createKV } from "idb-repo";
+
+// --- First Time Setup ---
+const provider = await PassphraseEncryptionProvider.create("user-password");
+LocalStorageKeyManager.savePBKDF2Salt(provider.getSalt());
+
+const kv = createKV({ encryptionProvider: provider });
+
+// --- Subsequent Sessions ---
+const userPassword = prompt("Enter your password:");
+const provider = await LocalStorageKeyManager.loadPBKDF2Provider(userPassword);
+
+if (!provider) {
+  throw new Error("Invalid password or salt not found!");
+}
+
+const kv = createKV({ encryptionProvider: provider });
+```
+
+**Example: Persisting and Recovering ML-KEM Keys (Easy Way)**
+
+```typescript
+import { LocalStorageKeyManager, createKV } from "idb-repo";
+
+// --- First Time Setup ---
+const provider = await WasmMlKemProvider.create();
+const { publicKey, secretKey } = provider.exportKeys();
+
+LocalStorageKeyManager.saveMLKEMKeys(publicKey, secretKey);
+
+const kv = createKV({ encryptionProvider: provider });
+
+// --- Subsequent Sessions ---
+const provider = await LocalStorageKeyManager.loadMLKEMProvider();
+
+if (!provider) {
+  throw new Error("ML-KEM keys not found! Data is unrecoverable.");
+}
+
+const kv = createKV({ encryptionProvider: provider });
+```
+
+**Secure Backend Storage (Recommended for Production):**
+
+```typescript
+import { BackendKeyManager, KeySerializer } from "idb-repo";
+
+// Initialize backend manager with your API
+const keyManager = new BackendKeyManager(
+  "https://api.example.com",
+  "your-auth-token"
+);
+
+// --- First Time Setup ---
+const provider = await WasmMlKemProvider.create();
+const { publicKey, secretKey } = provider.exportKeys();
+
+await keyManager.saveKey("user-123", {
+  type: "ml-kem-1024",
+  publicKey: KeySerializer.serialize(publicKey),
+  secretKey: KeySerializer.serialize(secretKey)
+});
+
+// --- Recovery ---
+const stored = await keyManager.loadKey("user-123");
+if (!stored || stored.type !== "ml-kem-1024") {
+  throw new Error("Keys not found!");
+}
+
+const pubKey = KeySerializer.deserialize(stored.publicKey);
+const secKey = KeySerializer.deserialize(stored.secretKey);
+
+const provider = await WasmMlKemProvider.fromKeys(pubKey, secKey);
+const kv = createKV({ encryptionProvider: provider });
+```
+
 ##### Security Considerations
 
 - **Key Management**: Always store encryption keys securely. Never hardcode keys in source code.
+- **Backup Keys**: Keep encrypted backups of your keys in multiple secure locations.
+- **Key Loss = Data Loss**: There is no "forgot password" recovery for encryption. Lost keys mean permanently lost data.
 - **Post-Quantum**: If you're storing data that must remain secret beyond 2030, consider post-quantum encryption (WasmMlKemProvider or NodeProvider).
 - **Overhead**: Encryption adds overhead to each value. ML-KEM adds ~1.5 KB per value due to per-value key encapsulation.
 - **Performance**: All providers are fast enough for most use cases. Even ML-KEM achieves ~12,000-14,000 operations/sec.
+- **localStorage Security**: Storing keys in localStorage is convenient but vulnerable to XSS attacks. For production, use:
+  - Secure backend storage with authentication
+  - Hardware security modules (HSM)
+  - Operating system keychains (Keychain on macOS, Credential Manager on Windows)
+  - Encrypted environment variables for server-side
 
 For detailed benchmarks, see `bench/encryption-providers.ts`.
 
@@ -301,5 +451,8 @@ The primary entry point for creating a storage instance.
 - `close()` → Promise
 
 ## License
+MIT 2026 Copyright © Seemueller
 
-MIT
+
+
+
