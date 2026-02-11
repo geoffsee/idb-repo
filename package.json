@@ -1,6 +1,6 @@
 {
   "name": "idb-repo",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "A high-performance IndexedDB-based key-value storage implementation with caching, TTL support, and full TypeScript support",
   "type": "module",
   "main": "./dist/index.js",

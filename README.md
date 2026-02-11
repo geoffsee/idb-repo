@@ -1,37 +1,24 @@
 # idb-repo
 
-Edge KV Storage.
+Universal KV Storage for Browser and Node.js.
 
 ## Overview
 
-This SDK provides a small, dependency-free abstraction over IndexedDB for building fast, reliable key-value stores in browser and edge-like environments. It focuses on predictable behavior, minimal surface area, and performance characteristics suitable for long-lived client applications.
+This SDK provides a small, dependency-free abstraction for building fast, reliable key-value stores. It automatically selects the best storage engine for your environment: **IndexedDB** in the browser and a high-performance **Log-Structured Merge-Tree (LSM)** filesystem backend in Node.js.
 
-The goal is not to hide IndexedDB, but to make it practical: sane defaults, explicit structure, and a repository pattern that enforces consistency without adding unnecessary complexity.
+The goal is to provide a consistent, predictable KV interface across all platforms, focusing on performance characteristics suitable for both client-side persistence and server-side edge runtimes.
 
 ## Design Principles
-SOLID PRINCIPLES w/
-- **Zero dependencies** — no runtime bloat, no transitive risk
+- **Universal** — Same API for Browser, Node.js, and Bun
+- **Persistent** — Durable storage by default on all platforms
+- **Zero dependencies** — No runtime bloat, no transitive risk
+- **Performance-first** — In-memory LRU caching and optimized storage backends
 
 
 ## What This Is
-- A thin repository abstraction over IndexedDB
+- A unified repository abstraction over platform-specific storage
 - A predictable KV interface with typed boundaries
-- A foundation for local-first and offline-capable systems
-
-## What This Is Not
-
-- An ORM
-- A sync engine
-- A framework replacement
-- A polyfill for non-browser runtimes
-
-## Use Cases
-
-- Edge-adjacent web apps (Workers + WebViews)
-- Local-first applications
-- Durable client caches
-- Structured persistence for complex frontends
-- Performance-sensitive UI state storage
+- A foundation for local-first and cross-platform applications
 
 ## Installation
 
@@ -44,15 +31,26 @@ npm install idb-repo
 ### Basic Setup
 
 ```typescript
-import { createIndexedDbKV } from "idb-repo";
+import { createKV } from "idb-repo";
 
-// Create a KV store instance
-const kv = createIndexedDbKV({
-  dbName: "my-app",      // IndexedDB database name (default: "kv")
-  storeName: "cache",    // Object store name (default: "kv")
-  version: 1,            // Schema version for migrations
+// Create a KV store instance - automatically picks best storage
+const kv = createKV({
+  dbName: "my-app",      // IndexedDB name or Node directory (default: "kv")
   cacheEntries: 2048     // In-memory LRU cache size (default: 2048)
 });
+```
+
+### Environment Support
+
+| Runtime | Storage Engine | Persistence |
+| --- | --- | --- |
+| **Browser** | IndexedDB | Yes |
+| **Node.js / Bun** | LSM File System | Yes |
+| **Testing / Fallback** | In-Memory | No (volatile) |
+
+#### Forcing In-Memory (for tests)
+```typescript
+const kv = createKV({ forceMemory: true });
 ```
 
 ### Core Operations
@@ -75,10 +73,6 @@ await kv.put("session:abc", { token: "xyz" }, {
 // Store ArrayBuffer/binary data
 const buffer = new TextEncoder().encode("binary data");
 await kv.put("binary-key", buffer);
-
-// Store File or Blob objects
-const file = document.querySelector("input[type=file]")!.files![0];
-await kv.put("files/myfile", file);
 ```
 
 #### Get (Retrieve Data)
@@ -91,13 +85,12 @@ const value = await kv.get("key1");
 const { value, metadata } = await kv.getWithMetadata("session:abc");
 
 // Helper functions for typed retrieval
+import { kvGetText, kvGetJson, kvGetArrayBuffer, kvGetStream } from "idb-repo";
+
 const text = await kvGetText(kv, "key1");
 const json = await kvGetJson(kv, "user:123");
 const buffer = await kvGetArrayBuffer(kv, "binary-key");
 const stream = await kvGetStream(kv, "large-file");
-
-// Get with custom cache TTL (bypasses storage expiration)
-const cached = await kvGetJson(kv, "user:123", 300); // 5 min cache
 ```
 
 #### Delete
@@ -112,7 +105,7 @@ await kv.delete("key1");
 ```typescript
 // List all keys
 const result = await kv.list();
-// { keys: ["key1", "user:123", ...], cursor: "..." }
+// { keys: [{ name: "key1" }, { name: "user:123" }], list_complete: true }
 
 // List with pagination
 const page = await kv.list({
@@ -130,7 +123,7 @@ const userKeys = await kv.list({
 #### Close
 
 ```typescript
-// Clean up resources
+// Clean up resources (closes DB connections / file handles)
 await kv.close();
 ```
 
@@ -143,127 +136,36 @@ await kv.close();
 await kv.put("document:42", documentData, {
   metadata: {
     userId: "user:123",
-    createdAt: new Date().toISOString(),
-    contentType: "application/json"
+    createdAt: new Date().toISOString()
   },
   expirationTtl: 86400 // 24 hours
 });
 
 // Retrieve and use metadata
 const { value, metadata } = await kv.getWithMetadata("document:42");
-if (metadata?.userId === "user:123") {
-  // Process owned document
-}
 ```
 
 #### Performance Patterns
 
-```typescript
-// Batch operations use getAll() internally for ~3-5x better throughput
-const result = await kv.list({ limit: 1000 });
+- **In-memory LRU cache** speeds up repeated reads (controlled via `cacheEntries`).
+- **Log-Structured Storage** in Node.js ensures fast appends and robust persistence.
+- **Lazy Expiration**: Expired records are identified during read/list and cleaned up to ensure consistent performance.
 
-// In-memory LRU cache speeds up repeated reads
-// First read: ~5-10ms (IndexedDB)
-// Subsequent reads of same key: ~0.1ms (memory)
-for (let i = 0; i < 100; i++) {
-  const user = await kvGetJson(kv, "user:123"); // Cache hit after first call
-}
+### API Reference
 
-// Readonly transactions for lists are faster than readwrite
-// Expired records are lazily deleted on read (not on list)
-```
+#### `createKV(opts?)`
+The primary entry point for creating a storage instance.
+- `dbName` (string): Storage identifier (IndexedDB name or Node directory).
+- `cacheEntries` (number): LRU cache size (default: 2048).
+- `forceMemory` (boolean): Force usage of volatile in-memory storage.
 
-#### Storing Files
-
-```typescript
-// Store a File object (from file input)
-const fileInput = document.querySelector("input[type=file]") as HTMLInputElement;
-const file = fileInput.files![0];
-await kv.put(`uploads/${file.name}`, file);
-
-// Store a Blob
-const blob = new Blob(["Hello, world!"], { type: "text/plain" });
-await kv.put("greeting.txt", blob);
-
-// Store binary ArrayBuffer
-const uint8Array = new Uint8Array([1, 2, 3, 4, 5]);
-await kv.put("binary-data", uint8Array);
-
-// Store a ReadableStream (useful for large files or streaming uploads)
-const stream = response.body; // from fetch()
-await kv.put("large-file", stream);
-
-// Retrieve files
-const file = await kv.get("uploads/myfile.pdf") as ArrayBuffer;
-const fileBlob = await kvGetArrayBuffer(kv, "uploads/myfile.pdf");
-
-// Stream large files efficiently
-const largeFile = await kvGetStream(kv, "large-file");
-await largeFile.pipeTo(writableStream);
-
-// List all stored files with metadata
-const result = await kv.list({ prefix: "uploads/" });
-for (const file of result.keys) {
-  console.log(`${file.name} - uploaded at ${file.metadata?.uploadedAt}`);
-}
-```
-
-#### Building Local-First Features
-
-```typescript
-// Store user preferences
-await kv.put("settings:display", {
-  theme: "dark",
-  fontSize: 14,
-  sidebarCollapsed: true
-});
-
-// Cache API responses
-await kv.put("posts:feed", postsData, {
-  expirationTtl: 300, // 5 minute cache
-  metadata: { fetchedAt: Date.now() }
-});
-
-// Store offline queue
-await kv.put(`pending:create:${uuid()}`, actionPayload, {
-  metadata: { type: "create", priority: 1 }
-});
-
-// Enumerate pending actions
-const { keys } = await kv.list({ prefix: "pending:" });
-for (const key of keys) {
-  const action = await kvGetJson(kv, key);
-  await syncAction(action);
-}
-```
-
-## API Reference
-
-### `IndexedDbKV` Class
-
-- **`constructor(opts?)`** — Create a new KV store instance
-  - `dbName` (string): IndexedDB database name
-  - `storeName` (string): Object store name
-  - `version` (number): Schema version
-  - `cacheEntries` (number): LRU cache size
-
-- **`get(key, options?)`** → Promise — Retrieve a value
-- **`getWithMetadata(key, options?)`** → Promise — Retrieve value and metadata
-- **`put(key, value, options?)`** → Promise — Store a value
-- **`delete(key)`** → Promise — Delete a key
-- **`list(options?)`** → Promise — Enumerate keys with pagination
-- **`close()`** → Promise — Close database connection
-
-### Helper Functions
-
-- **`kvGetText(kv, key, cacheTtl?)`** — Get value as string
-- **`kvGetJson(kv, key, cacheTtl?)`** — Get value as JSON
-- **`kvGetArrayBuffer(kv, key, cacheTtl?)`** — Get value as ArrayBuffer
-- **`kvGetStream(kv, key, cacheTtl?)`** — Get value as ReadableStream
-
-## Status
-
-This project is intentionally small and opinionated. APIs are stable where exposed, but evolution is expected as real-world constraints surface.
+#### `KVNamespace` Interface
+- `get(key, options?)` → Promise
+- `getWithMetadata(key, options?)` → Promise
+- `put(key, value, options?)` → Promise
+- `delete(key)` → Promise
+- `list(options?)` → Promise
+- `close()` → Promise
 
 ## License
 

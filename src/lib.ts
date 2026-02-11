@@ -6,6 +6,7 @@
 export {
     IndexedDbKV,
     createIndexedDbKV,
+    createKV,
     kvGetText,
     kvGetJson,
     kvGetArrayBuffer,
