@@ -69,6 +69,7 @@ export class NodeFileSystemStorageBackend implements StorageBackend {
         } else {
             await this.recoverIndex(segments);
             const newest = segments[segments.length - 1];
+            if (!newest) return; // Should not happen given segments.length > 0
             this.activeId = newest.id;
             await this.openActiveForAppend(this.activeId);
             
@@ -103,7 +104,7 @@ export class NodeFileSystemStorageBackend implements StorageBackend {
 
         const keyLen = header.readUInt16LE(6);
         const valLen = header.readUInt32LE(8);
-        const encodingFlag = header[5] >> 1; // bits 1-4 for encoding
+        const encodingFlag = (header[5] ?? 0) >> 1; // bits 1-4 for encoding
         
         const payloadLen = keyLen + valLen;
         const payload = Buffer.alloc(payloadLen);
@@ -337,7 +338,7 @@ export class NodeFileSystemStorageBackend implements StorageBackend {
                     const magic = header.readUInt32LE(0);
                     if (magic !== MAGIC) break;
 
-                    const flags = header[5];
+                    const flags = header[5] ?? 0;
                     const keyLen = header.readUInt16LE(6);
                     const valLen = header.readUInt32LE(8);
                     const ts = header.readUInt32LE(12);
