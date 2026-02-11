@@ -1,4 +1,5 @@
 import type {
+  KVAdapterOptions,
   KVGetOptions,
   KVListOptions,
   KVListResult,
@@ -26,12 +27,90 @@ import {
  */
 export class KVStorageAdapter implements KVNamespace {
   private cache: TinyLRU;
+  private encryptionProvider?: KVAdapterOptions["encryptionProvider"];
+  private encryptionKeyId?: string;
+  private encryptionReady: Promise<void> | null = null;
 
   constructor(
     private backend: StorageBackend,
-    opts?: { cacheEntries?: number },
+    private opts?: KVAdapterOptions,
   ) {
     this.cache = new TinyLRU(opts?.cacheEntries ?? 2048);
+    this.encryptionProvider = opts?.encryptionProvider;
+    this.encryptionKeyId = opts?.encryptionKeyId;
+  }
+
+  private async ensureEncryptionReady(): Promise<void> {
+    if (!this.encryptionProvider?.initialize) return;
+    if (!this.encryptionReady) {
+      this.encryptionReady = this.encryptionProvider.initialize();
+    }
+    await this.encryptionReady;
+  }
+
+  private async encodeForEncryption(
+    encoding: StoredRecord["encoding"],
+    storedValue: unknown,
+  ): Promise<Uint8Array> {
+    const header = new Uint8Array(2);
+    header[0] = 1;
+    header[1] = this.encodingToFlag(encoding);
+
+    let payload: Uint8Array;
+    if (encoding === "binary") {
+      const buf = await blobToArrayBuffer(storedValue as Blob);
+      payload = new Uint8Array(buf);
+    } else if (encoding === "clone") {
+      const json = JSON.stringify(storedValue);
+      if (json === undefined) {
+        throw new TypeError("Stored value cannot be represented as JSON text");
+      }
+      payload = new TextEncoder().encode(json);
+    } else {
+      payload = new TextEncoder().encode(String(storedValue));
+    }
+
+    const plaintext = new Uint8Array(header.length + payload.length);
+    plaintext.set(header, 0);
+    plaintext.set(payload, header.length);
+    return plaintext;
+  }
+
+  private decodeEncryptedPayload(plaintext: Uint8Array): {
+    encoding: StoredRecord["encoding"];
+    value: unknown;
+  } {
+    if (plaintext.length < 2 || plaintext[0] !== 1) {
+      throw new Error("Invalid encrypted payload");
+    }
+
+    const encoding = this.flagToEncoding(plaintext[1] ?? 255);
+    const payload = plaintext.subarray(2);
+
+    if (encoding === "binary") {
+      return { encoding, value: new Blob([Uint8Array.from(payload)]) };
+    }
+
+    const text = new TextDecoder().decode(payload);
+    if (encoding === "clone") {
+      return { encoding, value: JSON.parse(text) };
+    }
+    return { encoding, value: text };
+  }
+
+  private encodingToFlag(encoding: StoredRecord["encoding"]): number {
+    if (encoding === "text") return 0;
+    if (encoding === "json") return 1;
+    if (encoding === "clone") return 2;
+    return 3;
+  }
+
+  private flagToEncoding(flag: number): StoredRecord["encoding"] {
+    if (flag === 0) return "text";
+    if (flag === 1) return "json";
+    if (flag === 2) return "clone";
+    if (flag === 3) return "binary";
+    throw new Error("Unknown encrypted encoding flag");
   }
 
   private invalidateCache(key: string): void {
@@ -77,9 +156,30 @@ export class KVStorageAdapter implements KVNamespace {
       return { value: null, metadata: null };
     }
 
-    let decoded = decodeValue(rec, wantType);
+    let effectiveRecord = rec;
+    if (this.encryptionProvider) {
+      await this.ensureEncryptionReady();
 
-    if (rec.encoding === "binary") {
+      if (effectiveRecord.encoding !== "binary") {
+        throw new Error("Encrypted records must be stored as binary");
+      }
+
+      const encrypted = await blobToArrayBuffer(effectiveRecord.value as Blob);
+      const plaintext = await this.encryptionProvider.decrypt(
+        new Uint8Array(encrypted),
+        this.encryptionKeyId,
+      );
+      const decrypted = this.decodeEncryptedPayload(plaintext);
+      effectiveRecord = {
+        ...effectiveRecord,
+        encoding: decrypted.encoding,
+        value: decrypted.value,
+      };
+    }
+
+    let decoded = decodeValue(effectiveRecord, wantType);
+
+    if (effectiveRecord.encoding === "binary") {
       const blob = decoded as unknown as Blob;
       if (wantType === "stream") {
         decoded = (blob.stream() as ReadableStream<Uint8Array>) ?? null;
@@ -94,6 +194,14 @@ export class KVStorageAdapter implements KVNamespace {
 
     const meta = (rec.metadata ?? null) as T | null;
 
+    if (
+      this.encryptionProvider?.postDeserialize &&
+      wantType === "json" &&
+      decoded !== null
+    ) {
+      decoded = await this.encryptionProvider.postDeserialize(decoded);
+    }
+
     if (cacheKey) this.cache.set(cacheKey, decoded, meta, cacheTtl);
 
     return { value: decoded, metadata: meta };
@@ -106,14 +214,32 @@ export class KVStorageAdapter implements KVNamespace {
   ): Promise<void> {
     assertKey(key);
 
-    const { encoding, stored } = await normalizePutValue(value);
+    await this.ensureEncryptionReady();
+
+    const valueToStore = this.encryptionProvider?.preSerialize
+      ? await this.encryptionProvider.preSerialize(value)
+      : value;
+
+    const { encoding, stored } = await normalizePutValue(valueToStore);
     const expiresAt = computeExpiresAtMs(options);
 
     const t = nowMs();
+    let recordEncoding = encoding;
+    let recordValue = stored;
+    if (this.encryptionProvider) {
+      const plaintext = await this.encodeForEncryption(encoding, stored);
+      const ciphertext = await this.encryptionProvider.encrypt(
+        plaintext,
+        this.encryptionKeyId,
+      );
+      recordEncoding = "binary";
+      recordValue = new Blob([Uint8Array.from(ciphertext)]);
+    }
+
     const rec: StoredRecord = {
       key,
-      value: stored,
-      encoding,
+      value: recordValue,
+      encoding: recordEncoding,
       expiresAt,
       metadata: options?.metadata ?? null,
       createdAt: t,
@@ -136,6 +262,9 @@ export class KVStorageAdapter implements KVNamespace {
   }
 
   async close(): Promise<void> {
+    if (this.encryptionProvider?.shutdown) {
+      await this.encryptionProvider.shutdown();
+    }
     await this.backend.close();
     this.cache.clear();
   }

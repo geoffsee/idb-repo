@@ -1,3 +1,5 @@
+import type { BaseEncryptionProvider } from "./encryption/encryption-provider";
+
 export type KVGetType = "text" | "json" | "arrayBuffer" | "stream";
 export type KVValue =
   | string
@@ -88,4 +90,10 @@ export type OpenConfig = {
   dbName: string;
   storeName: string;
   version: number;
+};
+
+export type KVAdapterOptions = {
+  cacheEntries?: number;
+  encryptionProvider?: BaseEncryptionProvider;
+  encryptionKeyId?: string;
 };
