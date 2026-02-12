@@ -8,7 +8,7 @@
 
 import { WebCryptoEncryptionProvider } from "./web/web-provider";
 import { PassphraseEncryptionProvider } from "./web/web-provider";
-import { WasmMlKemProvider } from "./wasm/wasm-provider";
+import { WasmMlKemProvider, WasmArgon2Provider } from "./wasm/wasm-provider";
 
 export interface StoredAESKey {
   type: "aes-256-gcm";
@@ -20,13 +20,22 @@ export interface StoredPBKDF2Salt {
   salt: string; // base64-encoded
 }
 
+export interface StoredArgon2PHC {
+  type: "argon2-phc";
+  phc: string;
+}
+
 export interface StoredMLKEMKeys {
   type: "ml-kem-1024";
   publicKey: string; // base64-encoded
   secretKey: string; // base64-encoded
 }
 
-export type StoredKey = StoredAESKey | StoredPBKDF2Salt | StoredMLKEMKeys;
+export type StoredKey =
+  | StoredAESKey
+  | StoredPBKDF2Salt
+  | StoredArgon2PHC
+  | StoredMLKEMKeys;
 
 /**
  * Utilities for browser localStorage persistence (convenient but less secure)
@@ -86,6 +95,32 @@ export class LocalStorageKeyManager {
 
     const salt = Uint8Array.from(atob(parsed.salt), (c) => c.charCodeAt(0));
     return await PassphraseEncryptionProvider.create(passphrase, salt);
+  }
+
+  /**
+   * Save Argon2 PHC string to localStorage
+   */
+  static saveArgon2PHC(phc: string): void {
+    const stored: StoredArgon2PHC = {
+      type: "argon2-phc",
+      phc,
+    };
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stored));
+  }
+
+  /**
+   * Load Argon2 PHC and create provider from passphrase
+   */
+  static async loadArgon2Provider(
+    passphrase: string,
+  ): Promise<WasmArgon2Provider | null> {
+    const stored = localStorage.getItem(this.STORAGE_KEY);
+    if (!stored) return null;
+
+    const parsed: StoredKey = JSON.parse(stored);
+    if (parsed.type !== "argon2-phc") return null;
+
+    return await WasmArgon2Provider.create(passphrase, parsed.phc);
   }
 
   /**

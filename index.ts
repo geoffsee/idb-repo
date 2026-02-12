@@ -23,6 +23,7 @@ export {
 } from "./src/encryption/web/web-provider";
 
 export { WasmMlKemProvider } from "./src/encryption/wasm/wasm-provider";
+export { WasmArgon2Provider } from "./src/encryption/wasm/argon2-provider";
 
 // Key management utilities
 export {
@@ -34,6 +35,7 @@ export {
 export type {
   StoredAESKey,
   StoredPBKDF2Salt,
+  StoredArgon2PHC,
   StoredMLKEMKeys,
   StoredKey,
 } from "./src/encryption/key-management";
